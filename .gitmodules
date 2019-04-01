@@ -1,0 +1,3 @@
+[submodule "ndr-build-env"]
+	path = ndr-build-env
+	url = https://github.com/openndr/ndr-build-env.git

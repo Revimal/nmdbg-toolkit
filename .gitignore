@@ -1,0 +1,18 @@
+#Build outputs
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+build/
+*.o
+*.o.*
+
+#Dev files
+*.swp
+.vscode/
+
+#Build files
+native/
