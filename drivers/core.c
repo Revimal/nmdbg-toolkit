@@ -30,13 +30,13 @@ static int __init nmdbg_init(void)
 
 	nmictrl_add_handler("test_handler", &nmdbg_test_fn);
 	nmictrl_add_handler("test2_handler", &nmdbg_test2_fn);
-	nmictrl_trigger("test_handler");
+	nmictrl_trigger("test_handler", smp_processor_id());
 	return 0;
 }
 
 static void __exit nmdbg_exit(void)
 {
-	nmictrl_trigger("test2_handler");
+	nmictrl_trigger("test2_handler", smp_processor_id());
 	nmictrl_del_handler("test_handler");
 	nmictrl_del_handler("test2_handler");
 	return;

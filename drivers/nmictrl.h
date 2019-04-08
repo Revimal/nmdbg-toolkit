@@ -26,6 +26,6 @@ typedef struct {
 
 int nmictrl_add_handler(const char *handler_name, nmictrl_fn_t nmi_handler);
 void nmictrl_del_handler(const char *handler_name);
-void nmictrl_trigger(const char *handler_name);
+void nmictrl_trigger(const char *handler_name, unsigned int cpu_id);
 
 #endif

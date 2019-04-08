@@ -144,22 +144,22 @@ void nmictrl_del_handler(const char *handler_name)
 	spin_unlock(&nmictrl_handler_list_lock);
 }
 
-void nmictrl_trigger(const char *handler_name)
+void nmictrl_trigger(const char *handler_name, unsigned int cpu_id)
 {
 	nmictrl_handler_t *handler_ptr;
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(handler_ptr, &nmictrl_handler_list, handler_list) {
 		if (strncmp(handler_ptr->handler_name, handler_name, NMICTRL_HANDLER_NAMESZ) == 0) {
-			if (!cpumask_test_and_set_cpu(smp_processor_id(), &handler_ptr->handler_mask)) {
-				if (!cpumask_test_cpu(smp_processor_id(), &nmictrl_processor_mask))
+			if (!cpumask_test_and_set_cpu(cpu_id, &handler_ptr->handler_mask)) {
+				if (!cpumask_test_cpu(cpu_id, &nmictrl_processor_mask))
 				{
 					cpumask_t local_mask;
 
-					cpumask_set_cpu(smp_processor_id(), &nmictrl_processor_mask);
+					cpumask_set_cpu(cpu_id, &nmictrl_processor_mask);
 					rcu_read_unlock();
 					cpumask_clear(&local_mask);
-					cpumask_set_cpu(smp_processor_id(), &local_mask);
+					cpumask_set_cpu(cpu_id, &local_mask);
 					apic->send_IPI_mask(&local_mask, NMI_VECTOR);
 					goto skip_unlock;
 				}
