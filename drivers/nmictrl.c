@@ -16,15 +16,8 @@
 
 static cpumask_t nmictrl_processor_mask;
 
-static DEFINE_SPINLOCK(nmictrl_handler_list_lock);
+static DEFINE_SPINLOCK(nmictrl_global_write_lock);
 static LIST_HEAD(nmictrl_handler_list);
-
-/* operate as list_foreach_entry_safe_rcu */
-#define list_for_each_entry_nmi_rcu(pos, n, head, member) \
-	for (pos = list_entry_rcu((head)->next, typeof(*pos), member), \
-		n = list_entry_rcu((pos)->member.next, typeof(*pos), member); \
-		 &pos->member != (head); \
-		 pos = n, n = list_entry_rcu((pos)->member.next, typeof(*pos), member))
 
 /* RCU protected */
 static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
@@ -35,7 +28,7 @@ static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
 	if (cpumask_test_and_clear_cpu(smp_processor_id(), &nmictrl_processor_mask))
 	{
 		rcu_read_lock();
-		list_for_each_entry_nmi_rcu(handler_ptr, handler_nptr, &nmictrl_handler_list, handler_list) {
+		list_for_each_entry_safe_rcu(handler_ptr, handler_nptr, &nmictrl_handler_list, handler_list) {
 			if (cpumask_test_and_clear_cpu(smp_processor_id(), &handler_ptr->handler_mask)) {
 				nmictrl_fn_t handler_fn;
 
@@ -50,9 +43,8 @@ static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
 			}
 		}
 		rcu_read_unlock();
-		return NMI_HANDLED;
 	}
-	return NMI_DONE;
+	return NMI_HANDLED;
 }
 
 static void nmictrl_reclaim_handler(struct rcu_head *handler_rcu)
@@ -66,12 +58,119 @@ static void nmictrl_reclaim_handler(struct rcu_head *handler_rcu)
 	kfree(handler_ptr);
 }
 
+static void nmictrl_clear_handler_unlocked(void)
+{
+	nmictrl_handler_t *handler_ptr, *handler_nptr;
+
+	list_for_each_entry_safe(handler_ptr, handler_nptr, &nmictrl_handler_list, handler_list) {
+		list_del_rcu(&handler_ptr->handler_list);
+		call_rcu(&handler_ptr->handler_rcu, nmictrl_reclaim_handler);
+	}
+}
+
+int nmictrl_init(void)
+{
+	int ret;
+	unsigned long irqflag;
+
+	spin_lock_irqsave(&nmictrl_global_write_lock, irqflag);
+	ret = register_nmi_handler(NMI_LOCAL, nmictrl_generic_handler, 0, NMICTRL_GENERIC_HANDLER_NAME);
+	wmb();
+	spin_unlock_irqrestore(&nmictrl_global_write_lock, irqflag);
+	pr_info("Successfully attached nmictrl-subsystem\n");
+	return ret;
+}
+
+void nmictrl_shutdown(void)
+{
+	unsigned long irqflag;
+
+	spin_lock_irqsave(&nmictrl_global_write_lock, irqflag);
+	nmictrl_clear_handler_unlocked();
+	smp_wmb();
+	cpumask_clear(&nmictrl_processor_mask);
+	smp_wmb();
+	unregister_nmi_handler(NMI_LOCAL, NMICTRL_GENERIC_HANDLER_NAME);
+	spin_unlock_irqrestore(&nmictrl_global_write_lock, irqflag);
+	pr_info("Successfully detached nmictrl-subsystem\n");
+}
+
+void nmictrl_shutdown_sync(void)
+{
+	spin_lock(&nmictrl_global_write_lock);
+	nmictrl_clear_handler_unlocked();
+	while(!cpumask_empty(&nmictrl_processor_mask))
+		cpu_relax();
+	rcu_barrier();
+	smp_wmb();
+	unregister_nmi_handler(NMI_LOCAL, NMICTRL_GENERIC_HANDLER_NAME);
+	wmb();
+	spin_unlock(&nmictrl_global_write_lock);
+	pr_info("Successfully detached nmictrl-subsystem\n");
+}
+
+void nmictrl_trigger_all(void)
+{
+	rcu_read_lock();
+	if (!list_empty(&nmictrl_handler_list))
+	{
+		rcu_read_unlock();
+		apic->send_IPI_all(NMI_VECTOR);
+		goto skip_unlock;
+	}
+	rcu_read_unlock();
+skip_unlock:;
+}
+
+void nmictrl_trigger_self(void)
+{
+	rcu_read_lock();
+	if (!list_empty(&nmictrl_handler_list))
+	{
+		rcu_read_unlock();
+		apic->send_IPI_self(NMI_VECTOR);
+		goto skip_unlock;
+	}
+	rcu_read_unlock();
+skip_unlock:;
+}
+
+void nmictrl_trigger_others(void)
+{
+	rcu_read_lock();
+	if (!list_empty(&nmictrl_handler_list))
+	{
+		rcu_read_unlock();
+		apic->send_IPI_allbutself(NMI_VECTOR);
+		goto skip_unlock;
+	}
+	rcu_read_unlock();
+skip_unlock:;
+}
+
+void nmictrl_trigger_cpu(unsigned int cpu_id)
+{
+	rcu_read_lock();
+	if (!list_empty(&nmictrl_handler_list))
+	{
+		cpumask_t local_mask;
+
+		rcu_read_unlock();
+		cpumask_clear(&local_mask);
+		cpumask_set_cpu(cpu_id, &local_mask);
+		apic->send_IPI_mask(&local_mask, NMI_VECTOR);
+		goto skip_unlock;
+	}
+	rcu_read_unlock();
+skip_unlock:;
+}
+
 int nmictrl_add_handler(const char *handler_name, nmictrl_fn_t handler_fn)
 {
 	int ret;
 	nmictrl_handler_t *handler_ptr;
 
-	spin_lock(&nmictrl_handler_list_lock);
+	spin_lock(&nmictrl_global_write_lock);
 	list_for_each_entry(handler_ptr, &nmictrl_handler_list, handler_list) {
 		if (strncmp(handler_ptr->handler_name, handler_name, NMICTRL_HANDLER_NAMESZ) == 0) {
 			ret = NMICTRL_ERROR;
@@ -100,21 +199,16 @@ int nmictrl_add_handler(const char *handler_name, nmictrl_fn_t handler_fn)
 	handler_ptr->handler_fn = handler_fn;
 	cpumask_clear(&handler_ptr->handler_mask);
 
-	if (list_empty(&nmictrl_handler_list)) {
-		ret = register_nmi_handler(NMI_LOCAL, nmictrl_generic_handler, 0, NMICTRL_GENERIC_HANDLER_NAME);
-		if (ret)
-			goto error;
-	}
+	smp_wmb();
 	list_add_rcu(&handler_ptr->handler_list, &nmictrl_handler_list);
-	wmb();
 
-	spin_unlock(&nmictrl_handler_list_lock);
+	spin_unlock(&nmictrl_global_write_lock);
 	pr_info("Successfully registered nmi_handler(%p:%s:%p)\n",
 		handler_ptr, handler_ptr->handler_name, handler_ptr->handler_fn);
 	return ret;
 
 error:
-	spin_unlock(&nmictrl_handler_list_lock);
+	spin_unlock(&nmictrl_global_write_lock);
 	pr_warn("Failed to register nmi_handler(%p:%s->%s:%p)\n",
 		handler_ptr, !!(handler_name) ? handler_name : "NULL",
 		!!(handler_ptr) ? handler_ptr->handler_name : "NULL", (void *)handler_fn);
@@ -125,26 +219,25 @@ void nmictrl_del_handler(const char *handler_name)
 {
 	nmictrl_handler_t *handler_ptr;
 
-	spin_lock(&nmictrl_handler_list_lock);
+	spin_lock(&nmictrl_global_write_lock);
 	list_for_each_entry(handler_ptr, &nmictrl_handler_list, handler_list) {
 		if (strncmp(handler_ptr->handler_name, handler_name, NMICTRL_HANDLER_NAMESZ) == 0) {
 			list_del_rcu(&handler_ptr->handler_list);
+			smp_wmb();
 			call_rcu(&handler_ptr->handler_rcu, nmictrl_reclaim_handler);
 		}
 	}
-
-	if (list_empty(&nmictrl_handler_list)) {
-		unregister_nmi_handler(NMI_LOCAL, NMICTRL_GENERIC_HANDLER_NAME);
-		wmb();
-		while(!cpumask_empty(&nmictrl_processor_mask))
-			cpu_relax();
-		rcu_barrier();
-	}
-
-	spin_unlock(&nmictrl_handler_list_lock);
+	spin_unlock(&nmictrl_global_write_lock);
 }
 
-void nmictrl_trigger(const char *handler_name, unsigned int cpu_id)
+void nmictrl_clear_handler(void)
+{
+	spin_lock(&nmictrl_global_write_lock);
+	nmictrl_clear_handler_unlocked();
+	spin_unlock(&nmictrl_global_write_lock);
+}
+
+void nmictrl_prepare_handler(const char *handler_name, unsigned int cpu_id)
 {
 	nmictrl_handler_t *handler_ptr;
 
@@ -152,20 +245,11 @@ void nmictrl_trigger(const char *handler_name, unsigned int cpu_id)
 	list_for_each_entry_rcu(handler_ptr, &nmictrl_handler_list, handler_list) {
 		if (strncmp(handler_ptr->handler_name, handler_name, NMICTRL_HANDLER_NAMESZ) == 0) {
 			if (!cpumask_test_and_set_cpu(cpu_id, &handler_ptr->handler_mask)) {
-				if (!cpumask_test_cpu(cpu_id, &nmictrl_processor_mask))
-				{
-					cpumask_t local_mask;
-
-					cpumask_set_cpu(cpu_id, &nmictrl_processor_mask);
-					rcu_read_unlock();
-					cpumask_clear(&local_mask);
-					cpumask_set_cpu(cpu_id, &local_mask);
-					apic->send_IPI_mask(&local_mask, NMI_VECTOR);
-					goto skip_unlock;
-				}
+				smp_wmb();
+				cpumask_set_cpu(cpu_id, &nmictrl_processor_mask);
+				break;
 			}
 		}
 	}
 	rcu_read_unlock();
-skip_unlock:;
 }

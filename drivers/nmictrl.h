@@ -24,8 +24,18 @@ typedef struct {
 	struct rcu_head handler_rcu;
 } nmictrl_handler_t;
 
+int nmictrl_init(void);
+void nmictrl_shutdown(void);
+void nmictrl_shutdown_sync(void);
+
+void nmictrl_trigger_all(void);
+void nmictrl_trigger_self(void);
+void nmictrl_trigger_others(void);
+void nmictrl_trigger_cpu(unsigned int cpu_id);
+
 int nmictrl_add_handler(const char *handler_name, nmictrl_fn_t nmi_handler);
 void nmictrl_del_handler(const char *handler_name);
-void nmictrl_trigger(const char *handler_name, unsigned int cpu_id);
+void nmictrl_clear_handler(void);
 
+void nmictrl_prepare_handler(const char *handler_name, unsigned int cpu_id);
 #endif
