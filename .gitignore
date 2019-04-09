@@ -16,3 +16,6 @@ build/
 
 #Build files
 native/
+
+#Docu files
+doc/

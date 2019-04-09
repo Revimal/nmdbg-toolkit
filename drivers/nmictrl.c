@@ -4,8 +4,8 @@
  *
  * This is implementations of 'NMI control subsystem'
  *
- * @author Hyeonho Seo (revimal)
- * @bugs No Known Bugs
+ * @author Hyeonho Seo (Revimal)
+ * @bug No Known Bugs
  */
 
 #include "nmictrl.h"
@@ -25,13 +25,18 @@
 #define NMICTRL_GENERIC_HANDLER_NAME "nmictrl_generic_handler"
 
 /**
- * @brief User-defined handler structure.
+ * @brief Internal structure for user-defined handler.
  */
 typedef struct {
+	/** Handler name */
 	char handler_name[NMICTRL_HANDLER_NAMESZ];
+	/** Handler cpumask */
 	cpumask_t handler_mask;
+	/** Handler function */
 	nmictrl_fn_t handler_fn;
+	/** Handler list */
 	struct list_head handler_list;
+	/** Handler RCU object */
 	struct rcu_head handler_rcu;
 } nmictrl_handler_t;
 
@@ -41,9 +46,14 @@ static DEFINE_SPINLOCK(nmictrl_global_write_lock);
 static LIST_HEAD(nmictrl_handler_list);
 
 /**
- * @brief Wrapper function to handle generated IPI signal.
+ * @brief Internal function to handle generated IPI signal.
  *
  * @p cmd will not pass to the user-registered handler, because it always is 'NMI_LOCAL'.
+ *
+ * @param cmd
+ * 	Unused (Kernel reserve)
+ * @param regs
+ * 	The pthread register info that is passed to user-defined handlers
  */
 static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
 {
@@ -108,10 +118,13 @@ static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
 }
 
 /**
- * @brief Internal function to reclaim a user-registered handler when rcu grace period expired.
+ * @brief Internal function to reclaim an user-registered handler when rcu grace period expired.
  *
  * It always passes to 'call_rcu' kernel function; do not call this function directly.
- * #handler_rcu will automatically be filled by kernel rcu reclaimer callee.
+ * @p handler_rcu will automatically be filled by kernel rcu reclaimer callee.
+ *
+ * @param handler_rcu
+ * 	RCU object to resolve user-defined handler
  */
 static void nmictrl_reclaim_handler(struct rcu_head *handler_rcu)
 {

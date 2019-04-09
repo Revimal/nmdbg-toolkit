@@ -5,8 +5,8 @@
  * This contains the function prototypes, macros,
  * structures, enums, etc. for 'NMI control subsystem'
  *
- * @author Hyeonho Seo (revimal)
- * @bugs No Known Bugs
+ * @author Hyeonho Seo (Revimal)
+ * @bug No Known Bugs
  */
 
 #ifndef _NMDBG_NMICTRL_H
@@ -24,7 +24,7 @@
  * @brief Return values for NMI control subsystem.
  */
 typedef enum {
-	NMICTRL_HANDLED, /** As same as #NMICTRL_SUCCESS */
+	NMICTRL_HANDLED,
 	NMICTRL_ERROR,
 	NMICTRL_FORWARD,
 } nmictrl_ret_t;
@@ -72,7 +72,7 @@ void nmictrl_trigger_others(void);
 void nmictrl_trigger_cpu(unsigned int cpu_id);
 
 /**
- * @brief Register a user-defined handler.
+ * @brief Register an user-defined handler.
  *
  * Length of @p handler_name must be shorter than 32 characters.
  *
@@ -81,12 +81,12 @@ void nmictrl_trigger_cpu(unsigned int cpu_id);
  * @param handler_fn
  * 	The handler callback to be registered
  * @return
- * 	0(NMICTRL_SUCCESS) upon successful add the handler
+ * 	0 upon successful add the handler
  */
 int nmictrl_add_handler(const char *handler_name, nmictrl_fn_t nmi_handler);
 
 /**
- * @brief Unregister a user-defined handler.
+ * @brief Unregister an user-defined handler.
  * @param handler_name
  * 	The handler name to be unregistered
  */
@@ -98,9 +98,9 @@ void nmictrl_del_handler(const char *handler_name);
 void nmictrl_clear_handler(void);
 
 /**
- * @brief Prepare a user-defined handler.
+ * @brief Prepare an user-defined handler.
  *
- * "prepare" means notify to the #nmictrl_generic_handler that there are some handlers must be executed in.
+ * "prepare" means notify to the nmictrl_generic_handler() that there are some handlers must be executed in.
  * The generic handler instantly returns without any actions if no any "prepared" user-handlers.
  *
  * @param handler_name

@@ -1,3 +1,14 @@
+/**
+ * @file define.h
+ * @brief Prototypes for common uses
+ *
+ * This contains the function prototypes, macros,
+ * structures, enums, etc. for common uses.
+ *
+ * @author Hyeonho Seo (Revimal)
+ * @bug No Known Bugs
+ */
+
 #ifndef _NMDBG_DEFINE_H
 #define _NMDBG_DEFINE_H
 
