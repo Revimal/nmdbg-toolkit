@@ -1,7 +1,7 @@
-KMOD += nmdbg
-EXTRA_CFLAGS += -DNMDBG_MODULE_MVER='"$(shell date +%Y%m%d)"'
+HDRS += define.h
+include $(NBE_DIR)/ndr.kext.mk
 
-SRCS += core.c
-SRCS += nmictrl.c
-
-include $(NBE_DIR)/ndr.kernmod.mk
+DIRS += nmictrl
+DIRS += selftest
+DIRS += core
+include $(NBE_DIR)/ndr.subdir.mk

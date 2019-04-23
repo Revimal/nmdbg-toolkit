@@ -1,3 +1,6 @@
 [submodule "ndr-build-env"]
 	path = ndr-build-env
 	url = https://github.com/openndr/ndr-build-env.git
+[submodule "ktx"]
+	path = ktx
+	url = https://github.com/Revimal/ktx.git
