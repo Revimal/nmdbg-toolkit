@@ -150,7 +150,7 @@ static void nmictrl_clear_handler_unlocked(void)
 	}
 }
 
-int nmictrl_init(void)
+int nmictrl_startup(void)
 {
 	int ret;
 
@@ -158,7 +158,6 @@ int nmictrl_init(void)
 	ret = register_nmi_handler(NMI_LOCAL, nmictrl_generic_handler, 0, NMICTRL_GENERIC_HANDLER_NAME);
 	wmb();
 	spin_unlock(&nmictrl_global_write_lock);
-	pr_info("Successfully attached nmictrl-subsystem\n");
 	return ret;
 }
 
@@ -180,7 +179,6 @@ void nmictrl_shutdown(void)
 	unregister_nmi_handler(NMI_LOCAL, NMICTRL_GENERIC_HANDLER_NAME);
 	wmb();
 	spin_unlock(&nmictrl_global_write_lock);
-	pr_info("Successfully detached nmictrl-subsystem\n");
 }
 
 void nmictrl_shutdown_sync(void)
@@ -212,7 +210,6 @@ void nmictrl_shutdown_sync(void)
 	unregister_nmi_handler(NMI_LOCAL, NMICTRL_GENERIC_HANDLER_NAME);
 	wmb();
 	spin_unlock(&nmictrl_global_write_lock);
-	pr_info("Successfully detached nmictrl-subsystem\n");
 }
 
 void nmictrl_trigger_all(void)

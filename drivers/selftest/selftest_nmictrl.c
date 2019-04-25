@@ -6,37 +6,34 @@
 #include "nmictrl.h"
 
 static int selftest_nmictrl_self_flag = 0;
-static nmictrl_ret_t selftest_nmictrl_self_testfn(struct pt_regs * regs)
+static nmictrl_ret_t selftest_nmictrl_self_testfn(struct pt_regs *regs)
 {
-	pr_info("TEST_SELF_HANDLER_CALLED!\n");
 	selftest_nmictrl_self_flag = 1;
 	return NMICTRL_HANDLED;
 }
 
 static int selftest_nmictrl_all_flag = 0;
-static nmictrl_ret_t selftest_nmictrl_all_testfn(struct pt_regs * regs)
+static nmictrl_ret_t selftest_nmictrl_all_testfn(struct pt_regs *regs)
 {
-	pr_info("TEST_ALL_HANDLER_CALLED!\n");
 	selftest_nmictrl_all_flag = 1;
 	return NMICTRL_HANDLED;
 }
 
 static int selftest_nmictrl_another_flag = 0;
-static nmictrl_ret_t selftest_nmictrl_another_testfn(struct pt_regs * regs)
+static nmictrl_ret_t selftest_nmictrl_another_testfn(struct pt_regs *regs)
 {
-	pr_info("TEST_ANOTHER_HANDLER_CALLED!\n");
 	selftest_nmictrl_another_flag = 1;
 	return NMICTRL_HANDLED;
 }
 
-static nmictrl_ret_t selftest_nmictrl_shutdown_testfn(struct pt_regs * regs)
+static nmictrl_ret_t selftest_nmictrl_shutdown_testfn(struct pt_regs *regs)
 {
 	return NMICTRL_HANDLED;
 }
 
 KTX_DEFINE(selftest_nmictrl)
 {
-	KTX_REQUIRE(selftest_nmictrl, nmictrl_init(), 0);
+	KTX_REQUIRE(selftest_nmictrl, nmictrl_startup(), 0);
 	KTX_REQUIRE(selftest_nmictrl, nmictrl_add_handler("selftest_nmictrl_self", &selftest_nmictrl_self_testfn), 0);
 	KTX_REQUIRE(selftest_nmictrl, nmictrl_add_handler("selftest_nmictrl_all", &selftest_nmictrl_all_testfn), 0);
 	KTX_REQUIRE(selftest_nmictrl, nmictrl_add_handler("selftest_nmictrl_another", &selftest_nmictrl_another_testfn), 0);

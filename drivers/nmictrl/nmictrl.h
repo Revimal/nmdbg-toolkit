@@ -39,7 +39,7 @@ typedef nmictrl_ret_t (*nmictrl_fn_t)(struct pt_regs *);
  * @return
  * 	0 if initialization success.
  */
-int nmictrl_init(void);
+int nmictrl_startup(void);
 
 /**
  * @brief deactivate the NMI control subsystem.
