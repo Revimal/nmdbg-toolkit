@@ -54,6 +54,8 @@ static LIST_HEAD(nmictrl_handler_list);
  * 	Unused (Kernel reserve)
  * @param regs
  * 	The pthread register info that is passed to user-defined handlers
+ * @return
+ * 	NMI_HANDLED in most case. If not, NMI_DONE.
  */
 static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
 {

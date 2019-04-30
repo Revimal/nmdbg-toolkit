@@ -35,14 +35,14 @@ typedef enum {
 typedef nmictrl_ret_t (*nmictrl_fn_t)(struct pt_regs *);
 
 /**
- * @brief Activate the NMI control subsystem.
+ * @brief Activate the NMI control system.
  * @return
  * 	0 if initialization success.
  */
 int nmictrl_startup(void);
 
 /**
- * @brief deactivate the NMI control subsystem.
+ * @brief deactivate the NMI control system.
  */
 void nmictrl_shutdown(void);
 
