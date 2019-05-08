@@ -1,9 +1,9 @@
 /**
  * @file nmictrl.h
- * @brief Prototypes for 'NMI control subsystem'.
+ * @brief Prototypes for 'NMI control system'.
  *
  * This contains the function prototypes, macros,
- * structures, enums, etc. for 'NMI control subsystem'
+ * structures, enums, etc. for 'NMI control system'
  *
  * @author Hyeonho Seo (Revimal)
  * @bug No Known Bugs
@@ -21,7 +21,7 @@
 #define NMICTRL_SUCCESS NMICTRL_HANDLED
 
 /**
- * @brief Return values for NMI control subsystem.
+ * @brief Return values for NMI control system.
  */
 typedef enum {
 	NMICTRL_HANDLED,
@@ -47,7 +47,7 @@ int nmictrl_startup(void);
 void nmictrl_shutdown(void);
 
 /**
- * @brief Deactivate NMI control subsystem and wait for triggered IPI signals to finish.
+ * @brief Deactivate NMI control system and wait for triggered IPI signals to finish.
  */
 void nmictrl_shutdown_sync(void);
 

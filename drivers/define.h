@@ -17,14 +17,6 @@
 #endif
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#ifndef list_for_each_entry_safe_rcu
-#define list_for_each_entry_safe_rcu(pos, n, head, member) \
-	for (pos = list_entry_rcu((head)->next, typeof(*pos), member), \
-		n = list_entry_rcu((pos)->member.next, typeof(*pos), member); \
-		 &pos->member != (head); \
-		 pos = n, n = list_entry_rcu((pos)->member.next, typeof(*pos), member))
-#endif
-
 #define NMDBG_MODULE_VER "1.0.0"
 #ifndef NMDBG_MODULE_MVER
 #define NMDBG_MODULE_MVER "unknown"

@@ -1,3 +1,13 @@
+/**
+ * @file panichook.c
+ * @brief The panichook subsystem.
+ *
+ * This is implementations of 'panichook subsystem'
+ *
+ * @author Hyeonho Seo (Revimal)
+ * @bug No Known Bugs
+ */
+
 #include "panichook.h"
 
 #include <linux/kallsyms.h>

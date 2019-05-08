@@ -1,3 +1,14 @@
+/**
+ * @file panichook.h
+ * @brief Prototypes for 'panichook subsystem'.
+ *
+ * This contains the function prototypes, macros,
+ * structures, enums, etc. for 'panichook subsystem'
+ *
+ * @author Hyeonho Seo (Revimal)
+ * @bug No Known Bugs
+ */
+
 #ifndef _NMDBG_PANICHOOK_H
 #define _NMDBG_PANICHOOK_H
 

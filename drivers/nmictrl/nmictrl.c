@@ -1,8 +1,8 @@
 /**
  * @file nmictrl.c
- * @brief The NMI control subsystem.
+ * @brief The NMI control system.
  *
- * This is implementations of 'NMI control subsystem'
+ * This is implementations of 'NMI control system'
  *
  * @author Hyeonho Seo (Revimal)
  * @bug No Known Bugs
@@ -62,46 +62,11 @@ static int nmictrl_generic_handler(unsigned int cmd, struct pt_regs *regs)
 	nmictrl_ret_t handler_ret;
 	nmictrl_handler_t *handler_ptr, *handler_nptr;
 
-	if (cpumask_test_and_clear_cpu(smp_processor_id(), &nmictrl_processor_mask))
+	if (cpumask_test_and_clear_cpu(raw_smp_processor_id(), &nmictrl_processor_mask))
 	{
 		rcu_read_lock();
-		/*
-		 * This is "Non-maskable" intetrupt handler callback.
-		 * It means, your CPU can enter this routine even it in IRQ disabled state.
-		 * In that case, we cannot guarantee serialized synchronization using normal RCU APIs on the SMP system.
-		 *
-		 * Following example illustrate calling 'nmictrl_shutdown_sync' in CPU1 at the same time with NMI self-triggered in CPU0.
-		 * If we use normal 'list_for_each_entry_rcu' to iterate prepared handler, a horrible disaster will strike on our system.
-		 *
-		 * INITIAL LIST STATE:
-		 *  [0]: handler_0
-		 *  [1]: handler_1 -> Will be executed
-		 *  [2]: handler_2
-		 *
-		 * CPU0 							 CPU1
-		 * ---- 							 ----
-		 *      							 CALL_SHUTDOWN_SYNC
-		 * TRIGGER_LIST_ENTRY[1]
-		 *      							 ACQUIRE_IRQ_DISABLE
-		 * ENTER_NMI_CONTEXT
-		 * ACCESS_LIST_ENTRY[0]
-		 *      							 REMOVE_LIST_ENTRY[0]
-		 * LIST_FOREACH_BREAK
-		 * NOT_CLEANED_CPUMASK[1]
-		 *      							 REMOVE_LIST_ENTRY[1]
-		 *      							 REMOVE_LIST_ENTRY[2]
-		 *      							 WAIT_FOR_CPUMASK_EMPTY
-		 * ALL_LIST_ENTRY_REMOVED
-		 * IPI_CANNOT_BE_TRIGGERED
-		 * SO_CPUMASK_CANNOT_BE_EMPTY
-		 *      							 STILL_WATINIG_FOR_CPUMASK_EMPTY
-		 *      							 ...WTF?????????????????
-		 *
-		 * This is why I implemented 'list_for_each_entry_safe_rcu'.
-		 * Seems legit? :P
-		 */
-		list_for_each_entry_safe_rcu(handler_ptr, handler_nptr, &nmictrl_handler_list, handler_list) {
-			if (cpumask_test_and_clear_cpu(smp_processor_id(), &handler_ptr->handler_mask)) {
+		list_for_each_entry_rcu(handler_ptr, handler_nptr, &nmictrl_handler_list, handler_list) {
+			if (cpumask_test_and_clear_cpu(raw_smp_processor_id(), &handler_ptr->handler_mask)) {
 				nmictrl_fn_t handler_fn;
 
 				if (unlikely((handler_fn = handler_ptr->handler_fn) == NULL))
